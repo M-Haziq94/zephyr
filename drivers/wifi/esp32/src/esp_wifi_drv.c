@@ -15,6 +15,7 @@ LOG_MODULE_REGISTER(esp32_wifi, CONFIG_WIFI_LOG_LEVEL);
 #include <zephyr/net/wifi_mgmt.h>
 #include <zephyr/net/conn_mgr/connectivity_wifi_mgmt.h>
 #include <zephyr/device.h>
+#include <zephyr/kernel.h>
 #include <soc.h>
 #include "esp_private/wifi.h"
 #include "esp_event.h"
@@ -23,6 +24,8 @@ LOG_MODULE_REGISTER(esp32_wifi, CONFIG_WIFI_LOG_LEVEL);
 #include "esp_wpa.h"
 #include <esp_mac.h>
 #include "wifi/wifi_event.h"
+
+K_MUTEX_DEFINE(lock);
 
 #define DHCPV4_MASK (NET_EVENT_IPV4_DHCP_BOUND | NET_EVENT_IPV4_DHCP_STOP)
 
@@ -91,6 +94,12 @@ static void wifi_event_handler(struct net_mgmt_event_callback *cb, uint32_t mgmt
 
 static int esp32_wifi_send(const struct device *dev, struct net_pkt *pkt)
 {
+	if(k_mutex_lock(&lock,K_FOREVER) != 0)
+	{
+		LOG_ERR("Cannot lock XYZ display\n");
+		return -EIO;
+	}
+
 	LOG_INF("esp32_wifi_send");
 	struct esp32_wifi_runtime *data = dev->data;
 	const int pkt_len = net_pkt_get_len(pkt);
@@ -107,6 +116,8 @@ static int esp32_wifi_send(const struct device *dev, struct net_pkt *pkt)
 		goto out;
 	}
 
+k_mutex_unlock(&lock);
+
 #if defined(CONFIG_NET_STATISTICS_WIFI)
 	data->stats.bytes.sent += pkt_len;
 	data->stats.pkts.tx++;
@@ -116,6 +127,7 @@ static int esp32_wifi_send(const struct device *dev, struct net_pkt *pkt)
 	return 0;
 
 out:
+k_mutex_unlock(&lock);
 
 	LOG_ERR("Failed to send packet");
 #if defined(CONFIG_NET_STATISTICS_WIFI)
@@ -126,6 +138,12 @@ out:
 
 static int esp32_wifi_ap_send(const struct device *dev, struct net_pkt *pkt)
 {
+	if(k_mutex_lock(&lock,K_FOREVER) != 0)
+	{
+		LOG_ERR("Cannot lock XYZ display\n");
+		return -EIO;
+	}
+
 	LOG_INF("esp32_wifi_ap_send");
 	struct esp32_wifi_runtime *data = dev->data;
 	const int pkt_len = net_pkt_get_len(pkt);
@@ -141,6 +159,7 @@ static int esp32_wifi_ap_send(const struct device *dev, struct net_pkt *pkt)
 	if (esp_wifi_internal_tx(ESP_IF_WIFI_AP, (void *)data->frame_buf, pkt_len) != ESP_OK) {
 		goto out;
 	}
+k_mutex_unlock(&lock);
 
 #if defined(CONFIG_NET_STATISTICS_WIFI)
 	data->stats.bytes.sent += pkt_len;
@@ -151,6 +170,7 @@ static int esp32_wifi_ap_send(const struct device *dev, struct net_pkt *pkt)
 	return 0;
 
 out:
+k_mutex_unlock(&lock);
 
 	LOG_ERR("Failed to send packet");
 #if defined(CONFIG_NET_STATISTICS_WIFI)
@@ -162,6 +182,11 @@ out:
 static esp_err_t eth_esp32_ap_rx(void *buffer, uint16_t len, void *eb)
 {
 	LOG_INF("eth_esp32_ap_rx");
+	if(k_mutex_lock(&lock,K_FOREVER) != 0)
+	{
+		LOG_ERR("Cannot lock XYZ display\n");
+		return -EIO;
+	}
 
 	struct net_pkt *pkt;
 
@@ -192,20 +217,29 @@ static esp_err_t eth_esp32_ap_rx(void *buffer, uint16_t len, void *eb)
 #endif
 
 	esp_wifi_internal_free_rx_buffer(eb);
+	k_mutex_unlock(&lock);
 	return 0;
 
 ap_pkt_unref:
+
 	net_pkt_unref(pkt);
+
 
 #if defined(CONFIG_NET_STATISTICS_WIFI)
 	esp32_data.stats.errors.rx++;
 #endif
-
+	k_mutex_unlock(&lock);
 	return -EIO;
 }
 
 static esp_err_t eth_esp32_rx(void *buffer, uint16_t len, void *eb)
 {
+	if(k_mutex_lock(&lock,K_FOREVER) != 0)
+	{
+		LOG_ERR("Cannot lock XYZ display\n");
+		return -EIO;
+	}
+
 	struct net_pkt *pkt;
 
 	if (esp32_wifi_iface[0] == NULL) {
@@ -235,6 +269,8 @@ static esp_err_t eth_esp32_rx(void *buffer, uint16_t len, void *eb)
 #endif
 
 	esp_wifi_internal_free_rx_buffer(eb);
+	k_mutex_unlock(&lock);
+
 	return 0;
 
 pkt_unref:
@@ -243,7 +279,7 @@ pkt_unref:
 #if defined(CONFIG_NET_STATISTICS_WIFI)
 	esp32_data.stats.errors.rx++;
 #endif
-
+	k_mutex_unlock(&lock);
 	return -EIO;
 }
 
@@ -378,7 +414,7 @@ static void esp_wifi_handle_ap_connect_event(void *event_data)
 	wifi_event_ap_staconnected_t *event = (wifi_event_ap_staconnected_t *) event_data;
 
 	LOG_DBG("Station " MACSTR " join, AID=%d", MAC2STR(event->mac), event->aid);
-	wifi_mgmt_raise_ap_sta_connected_event(esp32_wifi_iface[AP], 0);
+	wifi_mgmt_raise_connect_result_event(esp32_wifi_iface[AP], 0);
 
 	if (!(esp32_data.ap_connection_cnt++)) {
 		esp_wifi_internal_reg_rxcb(WIFI_IF_AP, eth_esp32_ap_rx);
@@ -390,7 +426,7 @@ static void esp_wifi_handle_ap_disconnect_event(void *event_data)
 	wifi_event_ap_stadisconnected_t *event = (wifi_event_ap_stadisconnected_t *)event_data;
 
 	LOG_DBG("station "MACSTR" leave, AID=%d", MAC2STR(event->mac), event->aid);
-	wifi_mgmt_raise_ap_sta_disconnected_event(esp32_wifi_iface[AP], 0);
+	wifi_mgmt_raise_disconnect_result_event(esp32_wifi_iface[AP], 0);
 
 	if (!(--esp32_data.ap_connection_cnt)) {
 		esp_wifi_internal_reg_rxcb(WIFI_IF_AP, NULL);
