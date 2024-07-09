@@ -96,7 +96,6 @@ static int esp32_wifi_send(const struct device *dev, struct net_pkt *pkt)
 {
 	if(k_mutex_lock(&lock,K_FOREVER) != 0)
 	{
-		LOG_ERR("Cannot lock XYZ display\n");
 		return -EIO;
 	}
 
@@ -140,7 +139,6 @@ static int esp32_wifi_ap_send(const struct device *dev, struct net_pkt *pkt)
 {
 	if(k_mutex_lock(&lock,K_FOREVER) != 0)
 	{
-		LOG_ERR("Cannot lock XYZ display\n");
 		return -EIO;
 	}
 
@@ -184,7 +182,6 @@ static esp_err_t eth_esp32_ap_rx(void *buffer, uint16_t len, void *eb)
 	LOG_INF("eth_esp32_ap_rx");
 	if(k_mutex_lock(&lock,K_FOREVER) != 0)
 	{
-		LOG_ERR("Cannot lock XYZ display\n");
 		return -EIO;
 	}
 
@@ -236,7 +233,6 @@ static esp_err_t eth_esp32_rx(void *buffer, uint16_t len, void *eb)
 {
 	if(k_mutex_lock(&lock,K_FOREVER) != 0)
 	{
-		LOG_ERR("Cannot lock XYZ display\n");
 		return -EIO;
 	}
 
