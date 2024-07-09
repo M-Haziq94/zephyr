@@ -378,7 +378,7 @@ static void esp_wifi_handle_ap_connect_event(void *event_data)
 	wifi_event_ap_staconnected_t *event = (wifi_event_ap_staconnected_t *) event_data;
 
 	LOG_DBG("Station " MACSTR " join, AID=%d", MAC2STR(event->mac), event->aid);
-	wifi_mgmt_raise_connect_result_event(esp32_wifi_iface[AP], 0);
+	wifi_mgmt_raise_ap_sta_connected_event(esp32_wifi_iface[AP], 0);
 
 	if (!(esp32_data.ap_connection_cnt++)) {
 		esp_wifi_internal_reg_rxcb(WIFI_IF_AP, eth_esp32_ap_rx);
@@ -390,7 +390,7 @@ static void esp_wifi_handle_ap_disconnect_event(void *event_data)
 	wifi_event_ap_stadisconnected_t *event = (wifi_event_ap_stadisconnected_t *)event_data;
 
 	LOG_DBG("station "MACSTR" leave, AID=%d", MAC2STR(event->mac), event->aid);
-	wifi_mgmt_raise_disconnect_result_event(esp32_wifi_iface[AP], 0);
+	wifi_mgmt_raise_ap_sta_disconnected_event(esp32_wifi_iface[AP], 0);
 
 	if (!(--esp32_data.ap_connection_cnt)) {
 		esp_wifi_internal_reg_rxcb(WIFI_IF_AP, NULL);
