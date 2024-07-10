@@ -714,7 +714,20 @@ static int esp32_wifi_ap_disable(const struct device *dev)
 {
 	int err = 0;
 
-	err = esp_wifi_stop();
+	wifi_mode_t mode;
+
+	esp_wifi_get_mode(&mode);
+
+	if(mode == ESP32_WIFI_MODE_APSTA || mode == ESP32_WIFI_MODE_STA)
+	{
+		err |= esp_wifi_set_mode(ESP32_WIFI_MODE_STA);
+		err |= esp_wifi_start();
+	}
+	else
+	{
+		err = esp_wifi_stop();
+	}
+
 	if (err) {
 		LOG_ERR("Failed to disable Wi-Fi AP mode: (%d)", err);
 		return -EAGAIN;
