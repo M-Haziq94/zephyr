@@ -99,7 +99,6 @@ static int esp32_wifi_send(const struct device *dev, struct net_pkt *pkt)
 		return -EIO;
 	}
 
-	LOG_INF("esp32_wifi_send");
 	struct esp32_wifi_runtime *data = dev->data;
 	const int pkt_len = net_pkt_get_len(pkt);
 	esp_interface_t ifx =
@@ -142,7 +141,6 @@ static int esp32_wifi_ap_send(const struct device *dev, struct net_pkt *pkt)
 		return -EIO;
 	}
 
-	LOG_INF("esp32_wifi_ap_send");
 	struct esp32_wifi_runtime *data = dev->data;
 	const int pkt_len = net_pkt_get_len(pkt);
 	// esp_interface_t ifx =
@@ -179,7 +177,6 @@ k_mutex_unlock(&lock);
 
 static esp_err_t eth_esp32_ap_rx(void *buffer, uint16_t len, void *eb)
 {
-	LOG_INF("eth_esp32_ap_rx");
 	if(k_mutex_lock(&lock,K_FOREVER) != 0)
 	{
 		return -EIO;
@@ -924,24 +921,14 @@ static const struct wifi_mgmt_ops esp32_wifi_mgmt = {
 	.scan		   = esp32_wifi_scan,
 	.connect	   = esp32_wifi_connect,
 	.disconnect	   = esp32_wifi_disconnect,
-	// .ap_enable	   = esp32_wifi_ap_enable,
-	// .ap_disable	   = esp32_wifi_ap_disable,
-	// .iface_status	   = esp32_wifi_status,
-#if defined(CONFIG_NET_STATISTICS_WIFI)
-	.get_stats	   = esp32_wifi_stats,
-#endif
-};
-
-static const struct wifi_mgmt_ops esp32_wifi_ap_mgmt = {
-	// .scan	   = esp32_wifi_scan,
-	// .connect	   = esp32_wifi_connect,
-	// .disconnect	   = esp32_wifi_disconnect,
+#ifndef CONFIG_ESP32_WIFI_MODE_APSTA_ENABLE
 	.ap_enable	   = esp32_wifi_ap_enable,
 	.ap_disable	   = esp32_wifi_ap_disable,
 	.iface_status	   = esp32_wifi_status,
-// #if defined(CONFIG_NET_STATISTICS_WIFI)
-// 	.get_stats	   = esp32_wifi_stats,
-// #endif
+#endif
+#if defined(CONFIG_NET_STATISTICS_WIFI)
+	.get_stats	   = esp32_wifi_stats,
+#endif
 };
 
 static const struct net_wifi_mgmt_offload esp32_api = {
@@ -950,11 +937,22 @@ static const struct net_wifi_mgmt_offload esp32_api = {
 	.wifi_mgmt_api = &esp32_wifi_mgmt,
 };
 
+#ifdef CONFIG_ESP32_WIFI_MODE_APSTA_ENABLE
+static const struct wifi_mgmt_ops esp32_wifi_ap_mgmt = {
+	.ap_enable	   = esp32_wifi_ap_enable,
+	.ap_disable	   = esp32_wifi_ap_disable,
+	.iface_status	   = esp32_wifi_status,
+// #if defined(CONFIG_NET_STATISTICS_WIFI)
+// 	.get_stats	   = esp32_wifi_stats,
+// #endif
+};
+
 static const struct net_wifi_mgmt_offload esp32_ap_api = {
 	.wifi_iface.iface_api.init	  = esp32_wifi_ap_init,
 	.wifi_iface.send = esp32_wifi_ap_send,
 	.wifi_mgmt_api = &esp32_wifi_ap_mgmt,
 };
+#endif
 
 //Following is created as second, assigned index 2
 NET_DEVICE_DT_INST_DEFINE(0,
@@ -963,11 +961,13 @@ NET_DEVICE_DT_INST_DEFINE(0,
 		&esp32_api, ETHERNET_L2,
 		NET_L2_GET_CTX_TYPE(ETHERNET_L2), NET_ETH_MTU);
 
+#ifdef CONFIG_ESP32_WIFI_MODE_APSTA_ENABLE
 //Following is created First and will be AP. assigned index 1
 NET_DEVICE_DT_INST_DEFINE(1,
 		NULL, NULL,
 		&esp32_data, NULL, CONFIG_WIFI_INIT_PRIORITY,
 		&esp32_ap_api, ETHERNET_L2,
 		NET_L2_GET_CTX_TYPE(ETHERNET_L2), NET_ETH_MTU);
+#endif
 
 CONNECTIVITY_WIFI_MGMT_BIND(Z_DEVICE_DT_DEV_ID(DT_DRV_INST(0)));

@@ -40,6 +40,13 @@ config ESP32_WIFI_STA_RECONNECT
 	help
 	  Set auto WiFI reconnection when disconnected.
 
+config ESP32_WIFI_MODE_APSTA_ENABLE
+	bool "Enable APSTA mode"
+	default n
+	help
+	  Enable support for APSTA mode. net_if at index 1 will be treated for AP and
+	  net_if at index 2 will be treated for STA.
+
 config ESP32_WIFI_SW_COEXIST_ENABLE
 	bool
 	help
