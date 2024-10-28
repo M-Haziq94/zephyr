@@ -169,18 +169,25 @@ static int connect_to_wifi(void)
 	return ret;
 }
 
+static void net_if_loop(struct net_if *iface, void *user_data)
+{
+	LOG_INF("iface :%s", iface->if_dev->dev->name);
+}
+
 int main(void)
 {
 	k_sleep(K_SECONDS(5));
+
+	net_if_foreach(net_if_loop, NULL);
 
 	net_mgmt_init_event_callback(&cb, wifi_event_handler, NET_EVENT_WIFI_MASK);
 	net_mgmt_add_event_callback(&cb);
 
 	/* Get AP interface in AP-STA mode. */
-	ap_iface = net_if_get_wifi_sap();
+	ap_iface = net_if_get_by_index(1);
 
 	/* Get STA interface in AP-STA mode. */
-	sta_iface = net_if_get_wifi_sta();
+	sta_iface = net_if_get_by_index(2);
 
 	enable_ap_mode();
 	connect_to_wifi();

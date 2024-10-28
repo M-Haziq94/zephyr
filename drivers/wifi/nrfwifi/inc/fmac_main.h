@@ -96,6 +96,7 @@ struct nrf_wifi_vif_ctx_map {
 struct nrf_wifi_ctx_zep {
 	void *drv_priv_zep;
 	void *rpu_ctx;
+	unsigned char num_vifs;
 #ifdef CONFIG_NRF70_RADIO_TEST
 	struct rpu_conf_params conf_params;
 	bool rf_test_run;

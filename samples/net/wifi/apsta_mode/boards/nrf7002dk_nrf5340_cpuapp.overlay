@@ -1,0 +1,11 @@
+
+&wlan0 {
+	status = "okay";
+};
+
+/ {
+	wlan1: wlan1 {
+		compatible = "nordic,wlan";
+		status = "okay";
+	};
+};
