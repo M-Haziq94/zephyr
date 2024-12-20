@@ -520,6 +520,7 @@ void nrf_wifi_if_init_zep(struct net_if *iface)
 	}
 
 	dev = net_if_get_device(iface);
+	LOG_WRN("nrf_wifi_if_init_zep dev name %s", dev->name);
 
 	if (!dev) {
 		LOG_ERR("%s: Invalid dev",
